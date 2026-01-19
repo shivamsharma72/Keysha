@@ -62,7 +62,8 @@ apiClient.interceptors.response.use(
     }
     
     // Enhanced error message for network errors
-    let errorMessage = error.response?.data?.message || error.message || 'An error occurred'
+    const serverMessage = (error.response?.data as { message?: string } | undefined)?.message
+    let errorMessage = serverMessage || error.message || 'An error occurred'
     
     // Check for network/connection errors
     if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
