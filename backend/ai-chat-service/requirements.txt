@@ -1,0 +1,33 @@
+# FastAPI and server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# LangChain and LangGraph
+langchain>=0.1.13
+langchain-google-genai>=1.0.1
+langgraph==0.0.20
+langchain-core>=0.1.13
+
+# Google AI SDK (for listing models)
+google-generativeai>=0.3.0
+
+# MongoDB and Vector Search
+pymongo==4.6.0
+motor==3.3.2  # Async MongoDB driver
+
+# HTTP client
+httpx==0.25.2
+aiohttp>=3.13.0  # Updated for compatibility with langchain-google-genai
+
+# Environment and config
+python-dotenv==1.0.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# JWT and auth
+pyjwt==2.8.0
+cryptography==41.0.7
+
+# Utilities
+python-dateutil==2.8.2

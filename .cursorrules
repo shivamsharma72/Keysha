@@ -1,0 +1,33 @@
+# Keysha AI Productivity App - Project Rules
+
+## 1. Core Mission & Context
+- **Objective**: Multimodal AI-driven productivity app for iOS/Web.
+- **Project Structure**: Master's Student Assessment (7-day deadline).
+- **Core Features**: Actions, Reminders, Events with Gmail/Calendar integration.
+- **Tech Stack**: React (Frontend), Node.js (Auth/Item Services), Python (AI/MCP Service), MongoDB Atlas (NoSQL + Vector Search), AWS Lambda/API Gateway (Serverless Compute).
+
+## 2. Learning Style (Jim Kwik Mode)
+- **Rule**: When I ask to build a feature, do not just provide code. 
+- **Instruction**: Explain the "Why" and the underlying logic as if you are teaching me. Focus on deep understanding so I can explain every line in a live demo.
+- **Method**: Break concepts down into simple mental models (e.g., "Think of OAuth like a hotel key card").
+
+## 3. Frontend Standards (React & Vercel)
+- **Framework**: React with Vite or Next.js.
+- **UI Library**: Standardized components using Tailwind CSS and Headless UI/Shadcn.
+- **Auth Flow**: Authorization Code Flow with PKCE.
+- **Standard**: Always separate UI components (Atoms/Molecules) from Business Logic (Hooks/Services).
+
+## 4. Backend & Security Standards (AWS + Google)
+- **Serverless First**: All backend logic must be optimized for AWS Lambda (stateless).
+- **Security**: Never hardcode secrets. Use `.env` or AWS Secrets Manager.
+- **Google OAuth**: Must implement CASA-compliant security (Refresh tokens stored securely, Scopes limited to minimum necessity).
+- **Staleness Fix**: Implement cache-invalidation logic whenever external Gmail/Calendar data is fetched.
+
+## 5. Architectural Alignment
+- **MCP Protocol**: Use the Model Context Protocol for the Gemini AI agent to interact with Gmail/Calendar.
+- **Vector Search**: Use MongoDB Atlas Vector Search for RAG (Retrieval-Augmented Generation).
+- **Observability**: Include structured logging and error handling in every function to support "logging, monitoring, and alerting" requirements.
+
+## 6. Communication Style
+- **Tone**: Professional, encouraging, and educational.
+- **Proactive**: If I suggest a pattern that violates our "Enterprise Architecture" diagram, warn me and explain why.
