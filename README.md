@@ -203,44 +203,4 @@ Open **multiple terminals** and run:
 
 If all env vars and services are configured correctly, calendar + Keysha items should stay in sync.
 
----
-
-## 7. Create a New GitHub Repo and Push
-
-Run these commands **from the project root** (`/Users/shivamsharma/Desktop/Keysha-clone`), replacing placeholders:
-
-```bash
-# 1. Initialize git (if not already)
-git init
-
-# 2. Add all files
-git add .
-
-# 3. Commit
-git commit -m "Initial Keysha MVP commit"
-
-# 4. Create a new empty repo on GitHub
-#    - Go to GitHub → New repository → name it e.g. "keysha-mvp"
-#    - DO NOT add README / .gitignore there (we already have them locally)
-
-# 5. Add remote (replace YOUR_USERNAME and REPO_NAME)
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-
-# 6. Push main branch
-git branch -M main
-git push -u origin main
-```
-
-After this, your full Keysha project is on GitHub. You can then:
-- Connect the **frontend** (`/frontend`) to Vercel.
-- Deploy each backend service to AWS (Elastic Beanstalk, Lambda, etc.).
-
----
-
-## 8. Where to Go Next
-
-- **Vercel deploy** for frontend.
-- **AWS deploy** for each backend service.
-- Add monitoring/logging (CloudWatch, Sentry).
-- Harden OAuth scopes and secrets for production.
 
