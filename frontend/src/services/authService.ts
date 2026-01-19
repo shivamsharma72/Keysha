@@ -1,4 +1,4 @@
-import apiClient from './api'
+import axios from 'axios'
 import type { User } from '../types'
 
 /**
@@ -9,9 +9,58 @@ import type { User } from '../types'
  * it just makes the API calls and returns the data.
  * 
  * Separation of Concerns: Services = API calls, Context = State management
+ * 
+ * IMPORTANT: Uses its own axios instance because auth service runs on a different URL
+ * than other services (could be AWS Lambda, different port, etc.)
  */
 
+// Get auth service URL from environment (should be AWS Lambda URL in production)
 const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:3001/auth'
+
+// Debug: Log the auth service URL (remove in production)
+if (import.meta.env.DEV) {
+  console.log('🔐 Auth Service URL:', AUTH_SERVICE_URL)
+  console.log('🔐 VITE_AUTH_SERVICE_URL env var:', import.meta.env.VITE_AUTH_SERVICE_URL)
+}
+
+// Create dedicated axios instance for auth service (separate from apiClient)
+const authApiClient = axios.create({
+  baseURL: AUTH_SERVICE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000, // 30 seconds for OAuth flows
+})
+
+// Add error interceptor for better error messages
+authApiClient.interceptors.response.use(
+  (response) => response,
+  (error: any) => {
+    // Enhanced error message for network errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+      error.message = `Cannot connect to auth service at ${AUTH_SERVICE_URL}. Please check your configuration.`
+    } else if (error.code === 'ECONNABORTED') {
+      error.message = 'Request timed out. The auth service may be slow or unavailable.'
+    } else if (!error.response) {
+      error.message = `Network error: Unable to reach ${AUTH_SERVICE_URL}. Please check your connection.`
+    }
+    return Promise.reject(error)
+  }
+)
+
+// Add auth token interceptor (for refresh/logout calls)
+authApiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
 
 export interface LoginResponse {
   token: string
@@ -33,7 +82,7 @@ export interface OAuthInitResponse {
  * we're the same app that started the login process.
  */
 export const initiateOAuth = async (): Promise<OAuthInitResponse> => {
-  const response = await apiClient.post(`${AUTH_SERVICE_URL}/initiate`)
+  const response = await authApiClient.post('/initiate')
   return response.data
 }
 
@@ -51,7 +100,7 @@ export const exchangeCodeForToken = async (
   code: string,
   codeVerifier: string
 ): Promise<LoginResponse> => {
-  const response = await apiClient.post(`${AUTH_SERVICE_URL}/callback`, {
+  const response = await authApiClient.post('/callback', {
     code,
     codeVerifier,
   })
@@ -68,7 +117,7 @@ export const exchangeCodeForToken = async (
  * (proves you can get a new key).
  */
 export const refreshToken = async (): Promise<LoginResponse> => {
-  const response = await apiClient.post(`${AUTH_SERVICE_URL}/refresh`)
+  const response = await authApiClient.post('/refresh')
   return response.data
 }
 
@@ -81,7 +130,7 @@ export const refreshToken = async (): Promise<LoginResponse> => {
  */
 export const logout = async (): Promise<void> => {
   try {
-    await apiClient.post(`${AUTH_SERVICE_URL}/logout`)
+    await authApiClient.post('/logout')
   } finally {
     // Always clear local storage, even if API call fails
     localStorage.removeItem('auth_token')

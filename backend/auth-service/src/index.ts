@@ -45,7 +45,7 @@ app.use(cors(corsOptions))
 app.use(express.json())
 
 // Request Logging (optional - for debugging)
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   logger.debug(`${req.method} ${req.path}`)
   next()
 })
@@ -58,7 +58,7 @@ app.use((req, res, next) => {
  * - Monitoring tools
  * - Quick verification that server is running
  */
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'auth-service',

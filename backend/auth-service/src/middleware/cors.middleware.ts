@@ -1,5 +1,4 @@
 import cors from 'cors'
-import { Request } from 'express'
 
 /**
  * CORS (Cross-Origin Resource Sharing) Configuration
@@ -13,6 +12,11 @@ import { Request } from 'express'
  */
 
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+// Support multiple frontend URLs (local dev + Vercel production)
+const allowedOrigins = [
+  frontendUrl,
+  process.env.VERCEL_FRONTEND_URL, // Vercel deployment URL
+].filter(Boolean) // Remove undefined values
 
 export const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
@@ -21,16 +25,20 @@ export const corsOptions: cors.CorsOptions = {
       return callback(null, true)
     }
 
-    // Allow frontend URL
-    if (origin === frontendUrl) {
+    // Allow configured frontend URLs
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true)
     }
 
-    // In production, you might want to check against a whitelist
-    // For now, we'll allow the configured frontend URL
-    callback(null, true)
+    // In development, allow all origins (for testing)
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true)
+    }
+
+    // In production, reject unknown origins
+    callback(new Error('Not allowed by CORS'))
   },
   credentials: true, // Allow cookies/auth headers
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-service-token'],
 }

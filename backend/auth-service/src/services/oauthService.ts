@@ -1,9 +1,7 @@
-import { OAuth2Client } from 'google-auth-library'
 import { getOAuth2Client, GOOGLE_SCOPES } from '../config/googleOAuth'
 import {
   generateCodeVerifier,
   generateCodeChallenge,
-  verifyCodeChallenge,
 } from '../utils/pkce'
 import {
   findUserByGoogleId,
@@ -71,6 +69,7 @@ export async function initiateOAuth(): Promise<OAuthInitResult> {
       scope: GOOGLE_SCOPES,
       prompt: 'consent', // Force consent screen (ensures refresh token)
       code_challenge: codeChallenge,
+      // @ts-ignore - Type definition issue with googleapis, 'S256' is valid
       code_challenge_method: 'S256', // SHA256
     })
 
@@ -160,7 +159,7 @@ export async function handleOAuthCallback(
         googleId: googleUser.id,
         email: googleUser.email,
         name: googleUser.name || 'User',
-        picture: googleUser.picture,
+        picture: googleUser.picture || undefined,
         refreshToken: tokens.refresh_token,
       })
     }

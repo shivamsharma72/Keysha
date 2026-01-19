@@ -1,0 +1,118 @@
+# Serverless Framework Configuration for Auth Service
+# 
+# This file tells Serverless Framework how to deploy your Express app to AWS Lambda.
+# 
+# Key Concepts:
+# - service: Name of your service (appears in AWS console)
+# - provider: AWS Lambda configuration
+# - functions: Each function = one Lambda handler
+# - events: API Gateway endpoints that trigger the Lambda
+
+service: keysha-auth-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x  # Node.js 20 LTS (Lambda supports 18.x, 20.x)
+  region: us-east-1  # Change to your preferred region (us-west-2, eu-west-1, etc.)
+  stage: ${opt:stage, 'dev'}  # dev, staging, prod
+  
+  # Environment Variables
+  # These are available to your Lambda function
+  # IMPORTANT: Never commit secrets! Use AWS Secrets Manager for sensitive values
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    MONGODB_URI: ${env:MONGODB_URI}
+    GOOGLE_CLIENT_ID: ${env:GOOGLE_CLIENT_ID}
+    GOOGLE_CLIENT_SECRET: ${env:GOOGLE_CLIENT_SECRET}
+    GOOGLE_REDIRECT_URI: ${env:GOOGLE_REDIRECT_URI}
+    JWT_SECRET: ${env:JWT_SECRET}
+    JWT_EXPIRES_IN: ${env:JWT_EXPIRES_IN, '1h'}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:3000'}
+    VERCEL_FRONTEND_URL: ${env:VERCEL_FRONTEND_URL, ''}
+    SERVICE_TOKEN: ${env:SERVICE_TOKEN}
+    ENCRYPTION_KEY: ${env:ENCRYPTION_KEY}
+  
+  # IAM Role Permissions
+  # Lambda needs permissions to:
+  # - Write logs to CloudWatch (automatic)
+  # - Access Secrets Manager (if you use it)
+  # - Access VPC (if MongoDB is in VPC - not needed for Atlas)
+  iam:
+    role:
+      statements:
+        # Allow reading from Secrets Manager (optional - for production secrets)
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource:
+            - arn:aws:secretsmanager:${self:provider.region}:*:secret:keysha/auth-service/*
+  
+  # Lambda Configuration
+  timeout: 30  # 30 seconds max execution time
+  memorySize: 512  # 512 MB RAM (enough for Express + MongoDB connection)
+  
+  # API Gateway Configuration
+  httpApi:
+    cors:
+      allowedOrigins:
+        - ${env:FRONTEND_URL, 'http://localhost:3000'}
+        # VERCEL_FRONTEND_URL will be added if set in .env (serverless-dotenv-plugin handles empty strings)
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - x-service-token
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+
+# Lambda Function Definition
+functions:
+  # Single function that handles all routes via Express routing
+  api:
+    handler: dist/handler.handler  # Path to exported handler function
+    description: Auth Service API - Handles all authentication endpoints
+    
+    # API Gateway Events (HTTP endpoints)
+    events:
+      # Health Check
+      - httpApi:
+          path: /health
+          method: GET
+      
+      # Auth Routes (catch-all)
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+
+# Plugins
+plugins:
+  - serverless-dotenv-plugin  # Loads .env file before deployment
+  # Note: We build TypeScript manually with 'npm run build', so no TypeScript plugin needed
+  - serverless-offline  # For local development (optional)
+
+# Custom Configuration
+custom:
+  # Dotenv plugin configuration - loads all variables from .env
+  dotenv:
+    path: .env
+
+# Package Configuration
+package:
+  patterns:
+    # Include only necessary files
+    - 'dist/**'
+    - 'node_modules/**'
+    # Exclude development files
+    - '!src/**'
+    - '!.env*'
+    - '!*.md'
+    - '!tsconfig.json'
+    - '!.git/**'
+    - '!.vscode/**'

@@ -51,10 +51,12 @@ const LoginPage = () => {
       }
       
       // Check if it's a network error (backend not running)
-      if (errorMessage.includes('Network Error') || errorMessage.includes('ECONNREFUSED')) {
-        errorMessage = 'Cannot connect to backend server. Please ensure the auth service is running on http://localhost:3001'
+      if (errorMessage.includes('Network Error') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Cannot connect')) {
+        // Error message already includes the actual URL from authService
+        // Just make it more user-friendly
+        errorMessage = errorMessage || 'Cannot connect to authentication service. Please check your configuration or try again later.'
       } else if (errorMessage.includes('timeout')) {
-        errorMessage = 'Request timed out. The backend server may not be responding.'
+        errorMessage = 'Request timed out. The authentication service may be slow or unavailable.'
       }
       
       console.error('Login error:', err)

@@ -29,7 +29,12 @@ export interface JWTPayload {
  */
 export function generateToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
   try {
-    const token = jwt.sign(payload, JWT_CONFIG.secret, {
+    const secret = JWT_CONFIG.secret
+    if (!secret || secret.length === 0) {
+      throw new Error('JWT_SECRET is not configured')
+    }
+    // @ts-ignore - Type definition issue with jsonwebtoken, secret is validated above
+    const token = jwt.sign(payload, secret, {
       expiresIn: JWT_CONFIG.expiresIn,
       algorithm: 'HS256', // HMAC SHA-256 (symmetric encryption)
     })

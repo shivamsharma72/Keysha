@@ -37,7 +37,7 @@ const callbackSchema = z.object({
  * 
  * This is called when user clicks "Sign in with Google"
  */
-router.post('/initiate', async (req: Request, res: Response) => {
+router.post('/initiate', async (_req: Request, res: Response) => {
   try {
     logger.info('OAuth initiation requested')
 
@@ -210,7 +210,8 @@ router.get('/tokens/:userId', async (req: Request, res: Response, next) => {
       // Service-to-service call (for webhooks)
       logger.info(`Service-to-service token request for userId: ${userId}`)
       const accessToken = await getGoogleAccessToken(userId)
-      return res.json({ accessToken })
+      res.json({ accessToken })
+      return
     }
     
     // Log why service token auth failed
