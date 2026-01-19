@@ -58,7 +58,7 @@ provider:
     cors:
       allowedOrigins:
         - ${env:FRONTEND_URL, 'http://localhost:3000'}
-        # VERCEL_FRONTEND_URL will be added if set in .env (serverless-dotenv-plugin handles empty strings)
+        - ${env:VERCEL_FRONTEND_URL}
       allowedHeaders:
         - Content-Type
         - Authorization

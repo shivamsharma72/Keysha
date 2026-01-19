@@ -39,3 +39,8 @@ venv/
 backend/mcp-google-workspace/.credentials/
 backend/mcp-google-workspace/.gauth.json
 backend/mcp-google-workspace/.accounts.json
+
+# Serverless Framework build artifacts (contains secrets)
+.serverless/
+backend/auth-service/.serverless/
+backend/*/.serverless/
