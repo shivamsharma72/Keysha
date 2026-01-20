@@ -140,7 +140,14 @@ export const syncCalendar = async (
     throw new Error('Not authenticated. Please log in again.')
   }
   
+  // Validate token format (basic check)
+  if (token.length < 10) {
+    console.error('❌ Token appears invalid:', { tokenLength: token.length, tokenPreview: token.substring(0, 20) })
+    throw new Error('Invalid authentication token. Please log in again.')
+  }
+  
   console.log('📤 Sending sync request to:', `${INTEGRATION_SERVICE_URL}/sync/full`)
+  console.log('🔑 Token preview:', token.substring(0, 20) + '...')
   
   try {
     const response = await axios.post(

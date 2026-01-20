@@ -31,11 +31,30 @@ export function authenticate(
     const authHeader = req.headers.authorization
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.debug('No authorization header or invalid format', { 
+        hasHeader: !!authHeader,
+        headerPrefix: authHeader?.substring(0, 20) 
+      })
       res.status(401).json({ message: 'No token provided' })
       return
     }
 
     const token = authHeader.substring(7)
+    
+    // Validate token format (basic check)
+    if (!token || token.length < 10) {
+      logger.debug('Token too short or empty', { tokenLength: token?.length })
+      res.status(401).json({ message: 'Invalid token format' })
+      return
+    }
+
+    // Check if JWT_SECRET is configured
+    if (!JWT_SECRET || JWT_SECRET.length === 0) {
+      logger.error('JWT_SECRET is not configured')
+      res.status(500).json({ message: 'Server configuration error' })
+      return
+    }
+
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string }
 
     req.user = {
@@ -45,7 +64,10 @@ export function authenticate(
 
     next()
   } catch (error) {
-    logger.debug('Authentication failed:', error)
+    logger.debug('Authentication failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorName: error instanceof Error ? error.name : 'Unknown',
+    })
     res.status(401).json({
       message: error instanceof Error ? error.message : 'Invalid token',
     })
