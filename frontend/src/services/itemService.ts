@@ -141,10 +141,20 @@ export const syncCalendar = async (
     throw new Error('Not authenticated. Please log in again.')
   }
   
-  // Validate token format (basic check)
+  // Validate token format (JWT should have 3 parts separated by dots)
   if (token.length < 10) {
     console.error('❌ Token appears invalid:', { tokenLength: token.length, tokenPreview: token.substring(0, 20) })
     throw new Error('Invalid authentication token. Please log in again.')
+  }
+  
+  // JWT format check: should have 3 parts (header.payload.signature)
+  const tokenParts = token.split('.')
+  if (tokenParts.length !== 3) {
+    console.error('❌ Token format invalid (not a valid JWT):', { 
+      parts: tokenParts.length,
+      tokenPreview: token.substring(0, 30) 
+    })
+    throw new Error('Invalid authentication token format. Please log in again.')
   }
   
   console.log('📤 Sending sync request to:', `${INTEGRATION_SERVICE_URL}/sync/full`)
