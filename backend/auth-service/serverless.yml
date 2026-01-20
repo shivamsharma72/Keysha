@@ -71,6 +71,7 @@ provider:
         - DELETE
         - OPTIONS
       allowCredentials: true
+      maxAge: 86400  # Cache preflight requests for 24 hours
 
 # Lambda Function Definition
 functions:

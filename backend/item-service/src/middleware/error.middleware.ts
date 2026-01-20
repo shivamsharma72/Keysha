@@ -10,7 +10,7 @@ export function errorHandler(
   err: AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   logger.error('Request error:', {
     error: err.message,

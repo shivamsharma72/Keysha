@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express'
-import axios from 'axios'
 import { getUserIdFromResourceId, shouldProcessWebhook, markGoogleModified } from '../services/syncService'
 import { getGoogleAccessToken } from '../services/authService'
-import { createError } from '../middleware/error.middleware'
 import logger from '../utils/logger'
 import mongoose from 'mongoose'
 import Item from '../models/Item'
@@ -49,7 +47,7 @@ router.get('/google/calendar', (req: Request, res: Response) => {
  *   "expiration": "1234567890"
  * }
  */
-router.post('/google/calendar', async (req: Request, res: Response, next) => {
+router.post('/google/calendar', async (req: Request, res: Response) => {
   try {
     // IMPORTANT: Respond immediately to Google (within 5 seconds)
     // Then process asynchronously

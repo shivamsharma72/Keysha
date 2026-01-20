@@ -29,13 +29,13 @@ app.use(cors(corsOptions))
 app.use(express.json())
 
 // Request logging
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   logger.debug(`${req.method} ${req.path}`)
   next()
 })
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'integration-service',

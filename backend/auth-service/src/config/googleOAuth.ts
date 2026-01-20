@@ -15,11 +15,22 @@ import logger from '../utils/logger'
  * - Managing token lifecycle
  */
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
-)
+// Create OAuth2Client - but we'll recreate it if env vars change
+// This ensures we always use the latest redirect URI
+function createOAuth2Client() {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI
+
+  if (!clientId || !clientSecret || !redirectUri) {
+    throw new Error('Missing OAuth configuration')
+  }
+
+  return new google.auth.OAuth2(clientId, clientSecret, redirectUri)
+}
+
+// Create singleton instance
+let oauth2Client = createOAuth2Client()
 
 /**
  * Validates that all required OAuth environment variables are set
@@ -44,8 +55,14 @@ export function validateOAuthConfig(): void {
 
 /**
  * Gets the configured OAuth2 client
+ * 
+ * Recreates the client if environment variables have changed
+ * (important for Lambda where env vars might be updated)
  */
 export function getOAuth2Client() {
+  // Recreate client to ensure we have latest redirect URI
+  // This is important because Lambda containers can persist across deployments
+  oauth2Client = createOAuth2Client()
   return oauth2Client
 }
 

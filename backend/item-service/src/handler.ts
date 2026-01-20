@@ -1,8 +1,12 @@
-// ============================================
-// CRITICAL: Load environment variables FIRST
-// ============================================
-import 'dotenv/config'
+/**
+ * AWS Lambda Handler for Item Service
+ * 
+ * Wraps the Express app to work with AWS Lambda + API Gateway.
+ * Similar to auth-service handler.
+ */
 
+import 'dotenv/config'
+import serverlessHttp from 'serverless-http'
 import express, { Express } from 'express'
 import cors from 'cors'
 import { connectDatabase } from './config/database'
@@ -11,15 +15,8 @@ import { errorHandler } from './middleware/error.middleware'
 import itemsRoutes from './routes/items.routes'
 import logger from './utils/logger'
 
-/**
- * Item Service - Main Entry Point
- * 
- * Handles CRUD operations for Actions, Reminders, and Events.
- * Independent service, deployable to Lambda separately from auth-service.
- */
-
+// Create Express app
 const app: Express = express()
-const PORT = process.env.PORT || 3002
 
 // Middleware
 app.use(cors(corsOptions))
@@ -37,6 +34,7 @@ app.get('/health', (_req, res) => {
     status: 'ok',
     service: 'item-service',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'production',
   })
 })
 
@@ -54,31 +52,36 @@ app.use((req, res) => {
 // Error handler
 app.use(errorHandler)
 
-// Server startup
-async function startServer() {
+// Lambda initialization
+let isInitialized = false
+
+async function initialize() {
+  if (isInitialized) {
+    return
+  }
+
   try {
     logger.info('Connecting to database...')
     await connectDatabase()
-
-    app.listen(PORT, () => {
-      logger.info(`🚀 Item Service running on port ${PORT}`)
-      logger.info(`📍 Health check: http://localhost:${PORT}/health`)
-      logger.info(`📍 Items endpoints: http://localhost:${PORT}/items/*`)
-    })
+    isInitialized = true
+    logger.info('✅ Item Service initialized for Lambda')
   } catch (error) {
-    logger.error('Failed to start server:', error)
-    process.exit(1)
+    logger.error('Failed to initialize:', error)
+    isInitialized = false
   }
 }
 
-process.on('unhandledRejection', (error) => {
-  logger.error('Unhandled promise rejection:', error)
-  process.exit(1)
+// Wrap Express app with serverless-http
+const serverlessHandler = serverlessHttp(app, {
+  binary: ['image/*', 'application/pdf'],
 })
 
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception:', error)
-  process.exit(1)
-})
+// Lambda handler export
+export const handler = async (event: any, context: any) => {
+  if (!isInitialized) {
+    await initialize()
+  }
 
-startServer()
+  context.callbackWaitsForEmptyEventLoop = false
+  return serverlessHandler(event, context)
+}

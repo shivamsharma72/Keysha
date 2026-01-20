@@ -1,0 +1,89 @@
+# Serverless Framework Configuration for Integration Service
+
+service: keysha-integration-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    MONGODB_URI: ${env:MONGODB_URI}
+    JWT_SECRET: ${env:JWT_SECRET}
+    JWT_EXPIRES_IN: ${env:JWT_EXPIRES_IN, '1h'}
+    AUTH_SERVICE_URL: ${env:AUTH_SERVICE_URL, ''}
+    ITEM_SERVICE_URL: ${env:ITEM_SERVICE_URL, ''}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:3000'}
+    VERCEL_FRONTEND_URL: ${env:VERCEL_FRONTEND_URL, ''}
+    WEBHOOK_BASE_URL: ${env:WEBHOOK_BASE_URL, ''}
+    GOOGLE_CLIENT_ID: ${env:GOOGLE_CLIENT_ID}
+    GOOGLE_CLIENT_SECRET: ${env:GOOGLE_CLIENT_SECRET}
+    SERVICE_TOKEN: ${env:SERVICE_TOKEN}
+  
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource:
+            - arn:aws:secretsmanager:${self:provider.region}:*:secret:keysha/integration-service/*
+  
+  timeout: 30
+  memorySize: 512
+  
+  httpApi:
+    cors:
+      allowedOrigins:
+        - ${env:FRONTEND_URL, 'http://localhost:3000'}
+        - ${env:VERCEL_FRONTEND_URL}
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - x-service-token
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+      maxAge: 86400
+
+functions:
+  api:
+    handler: dist/handler.handler
+    description: Integration Service API - Handles Google Calendar sync and webhooks
+    
+    events:
+      - httpApi:
+          path: /health
+          method: GET
+      
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+custom:
+  dotenv:
+    path: .env
+
+package:
+  patterns:
+    - 'dist/**'
+    - 'node_modules/**'
+    - '!src/**'
+    - '!.env*'
+    - '!*.md'
+    - '!tsconfig.json'
+    - '!.git/**'
+    - '!.vscode/**'

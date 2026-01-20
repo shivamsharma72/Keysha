@@ -54,7 +54,7 @@ export async function updateItemFromCalendar(
  */
 export async function createItemFromCalendar(
   jwtToken: string,
-  userId: string,
+  _userId: string,
   eventData: {
     googleCalendarId: string
     title: string

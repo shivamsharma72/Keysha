@@ -79,8 +79,12 @@ router.delete('/calendar', authenticate, async (req: Request, res: Response, nex
       throw createError('No subscription found', 404)
     }
 
+    // Get JWT token from Authorization header
+    const authHeader = req.headers.authorization
+    const jwtToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : ''
+
     // Get user's Google access token
-    const accessToken = await getGoogleAccessToken(req.user.userId)
+    const accessToken = await getGoogleAccessToken(req.user.userId, jwtToken)
 
     // Unsubscribe from Google Calendar
     await unsubscribeFromCalendar(accessToken, subscription.channelId, subscription.resourceId)

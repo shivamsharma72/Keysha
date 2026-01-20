@@ -110,13 +110,23 @@ export async function handleOAuthCallback(
 ): Promise<OAuthCallbackResult> {
   try {
     const oauth2Client = getOAuth2Client()
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI
+
+    // Log for debugging
+    logger.debug('Exchanging code for tokens', {
+      redirectUri,
+      codeLength: code.length,
+      codeVerifierLength: codeVerifier.length,
+    })
 
     // Step 1: Exchange authorization code for tokens
     // This is where we use the code verifier - Google verifies it matches
     // the challenge we sent earlier
+    // IMPORTANT: Explicitly pass redirect_uri to ensure it matches what was used in auth URL
     const { tokens } = await oauth2Client.getToken({
       code,
       codeVerifier,
+      redirect_uri: redirectUri, // Explicitly pass redirect URI
     })
 
     if (!tokens.access_token || !tokens.refresh_token) {

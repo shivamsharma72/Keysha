@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import Item, { IItem } from '../models/Item'
+import { IItem } from '../models/Item'
 import logger from '../utils/logger'
 
 /**

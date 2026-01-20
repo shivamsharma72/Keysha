@@ -177,11 +177,11 @@ export async function getCalendarEvent(
     return {
       id: response.data.id || '',
       summary: response.data.summary || '',
-      description: response.data.description,
-      location: response.data.location,
-      start: response.data.start,
-      end: response.data.end,
-      updated: response.data.updated,
+      description: response.data.description || undefined,
+      location: response.data.location || undefined,
+      start: response.data.start ? { dateTime: response.data.start.dateTime || undefined } : undefined,
+      end: response.data.end ? { dateTime: response.data.end.dateTime || undefined } : undefined,
+      updated: response.data.updated || undefined,
     }
   } catch (error) {
     logger.error('Error getting calendar event:', error)
@@ -278,7 +278,7 @@ export async function findCalendarEventByTitleAndTime(
   accessToken: string,
   title: string,
   startDate: Date,
-  endDate: Date
+  _endDate: Date
 ): Promise<string | null> {
   try {
     const oauth2Client = new google.auth.OAuth2()

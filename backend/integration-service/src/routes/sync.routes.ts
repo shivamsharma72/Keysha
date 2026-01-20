@@ -284,7 +284,6 @@ router.post('/full', authenticate, async (req: Request, res: Response, next) => 
       // This prevents creating duplicates when an item exists but doesn't have googleCalendarId yet
       if (!existingItem) {
         const startDate = new Date(googleEvent.start.dateTime)
-        const endDate = new Date(googleEvent.end.dateTime)
         const title = googleEvent.summary || 'Untitled Event'
         
         existingItem = await Item.findOne({
@@ -313,10 +312,10 @@ router.post('/full', authenticate, async (req: Request, res: Response, next) => 
         if (shouldUpdate) {
           await updateItemFromCalendar(jwtToken, existingItem._id.toString(), {
             title: googleEvent.summary || 'Untitled Event',
-            description: googleEvent.description,
-            location: googleEvent.location,
-            startDate: googleEvent.start.dateTime,
-            endDate: googleEvent.end.dateTime,
+            description: googleEvent.description || undefined,
+            location: googleEvent.location || undefined,
+            startDate: googleEvent.start.dateTime || undefined,
+            endDate: googleEvent.end.dateTime || undefined,
           })
 
           await markGoogleModified(
@@ -342,10 +341,10 @@ router.post('/full', authenticate, async (req: Request, res: Response, next) => 
           // Update the existing item instead
           await updateItemFromCalendar(jwtToken, finalDuplicateCheck._id.toString(), {
             title: googleEvent.summary || 'Untitled Event',
-            description: googleEvent.description,
-            location: googleEvent.location,
-            startDate: googleEvent.start.dateTime,
-            endDate: googleEvent.end.dateTime,
+            description: googleEvent.description || undefined,
+            location: googleEvent.location || undefined,
+            startDate: googleEvent.start.dateTime || undefined,
+            endDate: googleEvent.end.dateTime || undefined,
           })
           await markGoogleModified(finalDuplicateCheck._id.toString(), googleCalendarId, googleLastModified)
           stats.googleToApp.updated++
@@ -353,11 +352,16 @@ router.post('/full', authenticate, async (req: Request, res: Response, next) => 
         }
 
         logger.info(`Creating new item in Keysha for Google Calendar event: "${googleEvent.summary || 'Untitled Event'}" (${googleCalendarId})`)
+        // Skip if missing required date fields
+        if (!googleEvent.start?.dateTime || !googleEvent.end?.dateTime) {
+          logger.warn(`Skipping event ${googleCalendarId} - missing start or end date`)
+          continue
+        }
         const itemId = await createItemFromCalendar(jwtToken, req.user.userId, {
           googleCalendarId,
           title: googleEvent.summary || 'Untitled Event',
-          description: googleEvent.description,
-          location: googleEvent.location,
+          description: googleEvent.description || undefined,
+          location: googleEvent.location || undefined,
           startDate: googleEvent.start.dateTime,
           endDate: googleEvent.end.dateTime,
         })
@@ -513,9 +517,9 @@ router.post('/full', authenticate, async (req: Request, res: Response, next) => 
           }
       }
       // Handle reminders
-      else if (appEvent.type === 'reminder' && appEvent.reminderTime) {
-        // Convert reminderTime to startDate/endDate (15-minute duration)
-        const startDate = new Date(appEvent.reminderTime)
+      else if (appEvent.type === 'reminder' && appEvent.startDate) {
+        // Convert startDate to endDate (15-minute duration)
+        const startDate = new Date(appEvent.startDate)
         const endDate = new Date(startDate.getTime() + 15 * 60 * 1000) // 15 minutes later
 
         // Since we filtered for items WITHOUT googleCalendarId, check if it exists in Google Calendar

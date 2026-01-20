@@ -12,6 +12,7 @@ import type { Item, CreateItemDto, UpdateItemDto } from '../types'
  * port (3002) than auth-service (3001).
  */
 
+// Item service base URL - should NOT include /items (routes are mounted at /items in Express)
 const ITEM_SERVICE_BASE_URL = import.meta.env.VITE_ITEM_SERVICE_URL || 'http://localhost:3002'
 
 // Create separate axios instance for item-service
@@ -117,7 +118,10 @@ export const syncCalendar = async (
     appToGoogle: { created: number; updated: number }
   }
 }> => {
-  const INTEGRATION_SERVICE_URL = import.meta.env.VITE_INTEGRATION_SERVICE_URL || 'http://localhost:3003'
+  const INTEGRATION_SERVICE_URL = import.meta.env.VITE_INTEGRATION_SERVICE_URL
+  if (!INTEGRATION_SERVICE_URL) {
+    throw new Error('VITE_INTEGRATION_SERVICE_URL is not configured. Please set it in your environment variables.')
+  }
   
   // Use axios directly since integration-service is on a different port
   const token = localStorage.getItem('auth_token')

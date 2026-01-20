@@ -66,14 +66,18 @@ const CallbackPage = () => {
         // Subscribe to Google Calendar webhooks (one-time setup)
         // This tells Google: "When this user's calendar changes, notify Keysha"
         try {
-          const INTEGRATION_SERVICE_URL = import.meta.env.VITE_INTEGRATION_SERVICE_URL || 'http://localhost:3003'
-          await axios.post(`${INTEGRATION_SERVICE_URL}/subscriptions/calendar`, {}, {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          })
-          console.log('✅ Subscribed to Google Calendar webhooks')
+          const INTEGRATION_SERVICE_URL = import.meta.env.VITE_INTEGRATION_SERVICE_URL
+          if (!INTEGRATION_SERVICE_URL) {
+            console.warn('⚠️ VITE_INTEGRATION_SERVICE_URL not set - skipping webhook subscription')
+          } else {
+            await axios.post(`${INTEGRATION_SERVICE_URL}/subscriptions/calendar`, {}, {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+            })
+            console.log('✅ Subscribed to Google Calendar webhooks')
+          }
         } catch (error: any) {
           // Non-fatal: Webhooks won't work, but user can still use manual sync
           console.warn('⚠️ Failed to subscribe to webhooks (non-fatal):', error.message)
