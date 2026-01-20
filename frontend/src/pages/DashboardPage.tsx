@@ -53,6 +53,8 @@ const DashboardPage = () => {
       const startDate = startOfDay(new Date())
       const endDate = addDays(startDate, weeksToShow * 7) // Sync for N weeks
       
+      console.log('Starting sync...', { startDate, endDate })
+      
       // Perform full sync
       const result = await itemService.syncCalendar(startDate, endDate)
       
@@ -60,9 +62,18 @@ const DashboardPage = () => {
       
       // Reload items after sync
       await loadItems()
-    } catch (error) {
+      
+      // Show success message
+      alert(`Sync completed! Created: ${result.stats.googleToApp.created + result.stats.appToGoogle.created}, Updated: ${result.stats.googleToApp.updated + result.stats.appToGoogle.updated}`)
+    } catch (error: any) {
       console.error('Failed to sync calendar:', error)
-      alert('Failed to sync calendar. Please try again.')
+      const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error'
+      console.error('Error details:', {
+        message: errorMessage,
+        status: error?.response?.status,
+        url: error?.config?.url,
+      })
+      alert(`Failed to sync calendar: ${errorMessage}. Check console for details.`)
     } finally {
       setIsLoading(false)
     }

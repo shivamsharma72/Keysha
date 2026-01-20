@@ -119,28 +119,56 @@ export const syncCalendar = async (
   }
 }> => {
   const INTEGRATION_SERVICE_URL = import.meta.env.VITE_INTEGRATION_SERVICE_URL
+  
+  // Debug logging
+  console.log('🔍 Sync Calendar Debug:', {
+    INTEGRATION_SERVICE_URL,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  })
+  
   if (!INTEGRATION_SERVICE_URL) {
-    throw new Error('VITE_INTEGRATION_SERVICE_URL is not configured. Please set it in your environment variables.')
+    const error = new Error('VITE_INTEGRATION_SERVICE_URL is not configured. Please set it in your Vercel environment variables.')
+    console.error('❌ Missing environment variable:', error.message)
+    throw error
   }
   
   // Use axios directly since integration-service is on a different port
   const token = localStorage.getItem('auth_token')
   
-  const response = await axios.post(
-    `${INTEGRATION_SERVICE_URL}/sync/full`,
-    {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: token ? `Bearer ${token}` : '',
-      },
-    }
-  )
+  if (!token) {
+    throw new Error('Not authenticated. Please log in again.')
+  }
   
-  return response.data
+  console.log('📤 Sending sync request to:', `${INTEGRATION_SERVICE_URL}/sync/full`)
+  
+  try {
+    const response = await axios.post(
+      `${INTEGRATION_SERVICE_URL}/sync/full`,
+      {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 60000, // 60 seconds timeout for sync operations
+      }
+    )
+    
+    console.log('✅ Sync response:', response.data)
+    return response.data
+  } catch (error: any) {
+    console.error('❌ Sync error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url,
+    })
+    throw error
+  }
 }
 
 /**
