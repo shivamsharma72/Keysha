@@ -61,22 +61,29 @@ class MCPService:
                 logger.warning(f"Accounts file not found: {self.accounts_file}")
             
             # Build command to start MCP server
-            # The server uses: node --loader ts-node/esm src/server.ts
+            # Priority: Use built dist in production, ts-node only in development
+            server_dist = self.server_path / "dist" / "server.js"
             server_src = self.server_path / "src" / "server.ts"
             
-            if server_src.exists():
+            # Check NODE_ENV to determine mode
+            is_production = os.getenv("NODE_ENV") == "production"
+            
+            if server_dist.exists() or is_production:
+                # Production mode: use built dist (faster, no TypeScript compilation)
+                if not server_dist.exists():
+                    raise FileNotFoundError(f"MCP server not built. Run 'npm run build' in {self.server_path}")
+                cmd = ["node", str(server_dist)]
+                logger.info("Using built MCP server (production mode)")
+            elif server_src.exists():
                 # Development mode: use ts-node
                 cmd = [
                     "node",
                     "--loader", "ts-node/esm",
                     str(server_src)
                 ]
+                logger.info("Using ts-node MCP server (development mode)")
             else:
-                # Production mode: use built dist
-                server_dist = self.server_path / "dist" / "server.js"
-                if not server_dist.exists():
-                    raise FileNotFoundError(f"MCP server not built. Run 'npm run build' in {self.server_path}")
-                cmd = ["node", str(server_dist)]
+                raise FileNotFoundError(f"MCP server not found. Expected either {server_dist} or {server_src}")
             
             # Add optional arguments
             cmd.extend([
@@ -107,13 +114,27 @@ class MCPService:
             # Start reading responses
             self._read_task = asyncio.create_task(self._read_responses())
             
-            # Wait a moment for server to initialize
-            await asyncio.sleep(2)
+            # Wait longer for server to initialize (especially in production with cold starts)
+            # ts-node can take 10-15 seconds, built dist should be faster
+            wait_time = 5.0 if os.getenv("NODE_ENV") == "production" else 2.0
+            logger.info(f"Waiting {wait_time}s for MCP server to initialize...")
+            await asyncio.sleep(wait_time)
             
-            # Initialize MCP connection
-            await self._initialize()
-            
-            logger.info("✅ MCP server started and initialized")
+            # Initialize MCP connection (with retry)
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    await self._initialize()
+                    logger.info("✅ MCP server started and initialized")
+                    break
+                except TimeoutError as e:
+                    if attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 5.0  # Exponential backoff: 5s, 10s, 15s
+                        logger.warning(f"MCP initialization attempt {attempt + 1} failed: {e}. Retrying in {wait_time}s...")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logger.error(f"MCP initialization failed after {max_retries} attempts: {e}")
+                        raise
             
         except Exception as e:
             logger.error(f"Failed to start MCP server: {e}")
@@ -221,8 +242,8 @@ class MCPService:
             self.writer.write(message.encode('utf-8'))
             await self.writer.drain()
             
-            # Wait for response (with timeout)
-            response = await asyncio.wait_for(future, timeout=30.0)
+            # Wait for response (with timeout) - increased for Cloud Run cold starts
+            response = await asyncio.wait_for(future, timeout=60.0)
             return response
         except asyncio.TimeoutError:
             self.pending_requests.pop(request_id, None)

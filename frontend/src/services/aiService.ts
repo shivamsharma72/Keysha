@@ -45,7 +45,7 @@ export const sendChatMessage = async (request: ChatRequest): Promise<ChatRespons
   // AI calls can take longer than typical CRUD requests (LLM reasoning + tool calls).
   // Override the default axios timeout (10s) to avoid frontend showing a generic error.
   const response = await apiClient.post(`${AI_SERVICE_URL}/chat`, request, {
-    timeout: 30000, // 30 seconds
+    timeout: 120000, // 120 seconds (2 minutes) - AI + MCP tool calls can take time
   })
   return response.data
 }
