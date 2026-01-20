@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 import type { Item, CreateItemDto, UpdateItemDto } from '../types'
+import { refreshToken } from './authService'
 
 /**
  * Item Service - CRUD Operations for Actions, Reminders, Events
@@ -149,8 +150,9 @@ export const syncCalendar = async (
   console.log('📤 Sending sync request to:', `${INTEGRATION_SERVICE_URL}/sync/full`)
   console.log('🔑 Token preview:', token.substring(0, 20) + '...')
   
-  try {
-    const response = await axios.post(
+  // Helper function to make the sync request
+  const makeSyncRequest = async (authToken: string) => {
+    return axios.post(
       `${INTEGRATION_SERVICE_URL}/sync/full`,
       {
         startDate: startDate.toISOString(),
@@ -159,15 +161,37 @@ export const syncCalendar = async (
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         timeout: 60000, // 60 seconds timeout for sync operations
       }
     )
-    
+  }
+  
+  try {
+    const response = await makeSyncRequest(token)
     console.log('✅ Sync response:', response.data)
     return response.data
   } catch (error: any) {
+    // If token expired (401), try refreshing and retry once
+    if (error.response?.status === 401) {
+      console.log('🔄 Token expired, refreshing...')
+      try {
+        const refreshResponse = await refreshToken()
+        const newToken = refreshResponse.token
+        localStorage.setItem('auth_token', newToken)
+        localStorage.setItem('user', JSON.stringify(refreshResponse.user))
+        
+        console.log('✅ Token refreshed, retrying sync...')
+        const retryResponse = await makeSyncRequest(newToken)
+        console.log('✅ Sync response (after refresh):', retryResponse.data)
+        return retryResponse.data
+      } catch (refreshError: any) {
+        console.error('❌ Failed to refresh token:', refreshError)
+        throw new Error('Your session has expired. Please log in again.')
+      }
+    }
+    
     console.error('❌ Sync error:', {
       message: error.message,
       response: error.response?.data,
