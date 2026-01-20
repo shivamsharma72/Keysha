@@ -38,10 +38,10 @@ gcloud services enable cloudbuild.googleapis.com
 gcloud services enable run.googleapis.com
 gcloud services enable containerregistry.googleapis.com
 
-# Build the Docker image
-echo "🏗️  Building Docker image..."
+# Build the Docker image (for linux/amd64 platform - Cloud Run requirement)
+echo "🏗️  Building Docker image for linux/amd64..."
 cd "$(dirname "$0")/.."  # Go to backend/ directory (parent of ai-chat-service)
-docker build -t ${IMAGE_NAME}:latest -f ai-chat-service/Dockerfile .
+docker build --platform linux/amd64 -t ${IMAGE_NAME}:latest -f ai-chat-service/Dockerfile .
 
 # Push the image to Container Registry
 echo "📤 Pushing image to Container Registry..."
@@ -59,7 +59,7 @@ gcloud run deploy ${SERVICE_NAME} \
     --cpu 2 \
     --timeout 300 \
     --max-instances 10 \
-    --set-env-vars "MONGODB_URI=${MONGODB_URI},GEMINI_API_KEY=${GEMINI_API_KEY},SERVICE_TOKEN=${SERVICE_TOKEN},JWT_SECRET=${JWT_SECRET},AUTH_SERVICE_URL=${AUTH_SERVICE_URL},ITEM_SERVICE_URL=${ITEM_SERVICE_URL},INTEGRATION_SERVICE_URL=${INTEGRATION_SERVICE_URL},FRONTEND_URL=${FRONTEND_URL},MCP_SERVER_PATH=/app/mcp-server,MCP_GAUTH_FILE=/app/mcp-server/.gauth.json,MCP_ACCOUNTS_FILE=/app/mcp-server/.accounts.json,NODE_ENV=production,PORT=8000"
+    --set-env-vars "MONGODB_URI=${MONGODB_URI},GEMINI_API_KEY=${GEMINI_API_KEY},SERVICE_TOKEN=${SERVICE_TOKEN},JWT_SECRET=${JWT_SECRET},AUTH_SERVICE_URL=${AUTH_SERVICE_URL},ITEM_SERVICE_URL=${ITEM_SERVICE_URL},INTEGRATION_SERVICE_URL=${INTEGRATION_SERVICE_URL},FRONTEND_URL=${FRONTEND_URL},MCP_SERVER_PATH=/app/mcp-server,MCP_GAUTH_FILE=/app/mcp-server/.gauth.json,MCP_ACCOUNTS_FILE=/app/mcp-server/.accounts.json,NODE_ENV=production,MCP_GAUTH_JSON_B64=${MCP_GAUTH_JSON_B64},MCP_ACCOUNTS_JSON_B64=${MCP_ACCOUNTS_JSON_B64}"
 
 echo ""
 echo "✅ Deployment complete!"
