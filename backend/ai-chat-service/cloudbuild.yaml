@@ -1,0 +1,75 @@
+# Google Cloud Build configuration for AI Chat Service
+# This file is used by Cloud Build to build and deploy the Docker image
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/keysha-ai-chat-service:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/keysha-ai-chat-service:latest'
+      - '-f'
+      - 'Dockerfile'
+      - '..'
+    dir: 'backend/ai-chat-service'
+
+  # Push the image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/keysha-ai-chat-service:$SHORT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/keysha-ai-chat-service:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'keysha-ai-chat-service'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/keysha-ai-chat-service:$SHORT_SHA'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'us-central1'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8000'
+      - '--memory'
+      - '2Gi'
+      - '--cpu'
+      - '2'
+      - '--timeout'
+      - '300'
+      - '--max-instances'
+      - '10'
+      - '--set-env-vars'
+      - |
+        MONGODB_URI=${_MONGODB_URI},
+        GEMINI_API_KEY=${_GEMINI_API_KEY},
+        SERVICE_TOKEN=${_SERVICE_TOKEN},
+        JWT_SECRET=${_JWT_SECRET},
+        AUTH_SERVICE_URL=${_AUTH_SERVICE_URL},
+        ITEM_SERVICE_URL=${_ITEM_SERVICE_URL},
+        INTEGRATION_SERVICE_URL=${_INTEGRATION_SERVICE_URL},
+        FRONTEND_URL=${_FRONTEND_URL},
+        MCP_SERVER_PATH=/app/mcp-server,
+        MCP_GAUTH_FILE=/app/mcp-server/.gauth.json,
+        MCP_ACCOUNTS_FILE=/app/mcp-server/.accounts.json,
+        NODE_ENV=production,
+        PORT=8000
+
+images:
+  - 'gcr.io/$PROJECT_ID/keysha-ai-chat-service:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/keysha-ai-chat-service:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY

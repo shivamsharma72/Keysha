@@ -5,6 +5,8 @@ FastAPI application for AI-powered chat with calendar and task management.
 """
 import os
 import logging
+import json
+import base64
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,6 +36,46 @@ mcp_client: Optional[MCPClient] = None
 agent: Optional[KeyshaAgent] = None
 
 
+def setup_mcp_credentials():
+    """
+    Setup MCP server credentials from environment variables or files.
+    
+    In Cloud Run, credentials can be passed as base64-encoded env vars
+    for security. This function handles both file-based and env-based configs.
+    """
+    mcp_server_path = Path(settings.MCP_SERVER_PATH)
+    credentials_dir = mcp_server_path / ".credentials"
+    credentials_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Handle .gauth.json
+    gauth_file = Path(settings.MCP_GAUTH_FILE)
+    if not gauth_file.exists():
+        # Try to get from base64 env var (Cloud Run)
+        gauth_b64 = os.getenv("MCP_GAUTH_JSON_B64")
+        if gauth_b64:
+            logger.info("Loading .gauth.json from MCP_GAUTH_JSON_B64 env var")
+            gauth_data = json.loads(base64.b64decode(gauth_b64).decode())
+            gauth_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(gauth_file, 'w') as f:
+                json.dump(gauth_data, f, indent=2)
+        else:
+            logger.warning(f".gauth.json not found at {gauth_file} and MCP_GAUTH_JSON_B64 not set")
+    
+    # Handle .accounts.json
+    accounts_file = Path(settings.MCP_ACCOUNTS_FILE)
+    if not accounts_file.exists():
+        # Try to get from base64 env var (Cloud Run)
+        accounts_b64 = os.getenv("MCP_ACCOUNTS_JSON_B64")
+        if accounts_b64:
+            logger.info("Loading .accounts.json from MCP_ACCOUNTS_JSON_B64 env var")
+            accounts_data = json.loads(base64.b64decode(accounts_b64).decode())
+            accounts_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(accounts_file, 'w') as f:
+                json.dump(accounts_data, f, indent=2)
+        else:
+            logger.warning(f".accounts.json not found at {accounts_file} and MCP_ACCOUNTS_JSON_B64 not set")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
@@ -43,6 +85,9 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting AI Chat Service...")
     
     try:
+        # Setup MCP credentials (from env vars if in Cloud Run)
+        setup_mcp_credentials()
+        
         # Initialize vector store
         vector_store = VectorStore(settings.MONGODB_URI)
         await vector_store.initialize()
@@ -74,7 +119,7 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("🛑 Shutting down AI Chat Service...")
-    if mcp_client:
+    if mcp_service:
         try:
             await mcp_service.stop()
         except Exception as e:
