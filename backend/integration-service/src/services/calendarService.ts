@@ -25,6 +25,21 @@ export async function createCalendarEvent(
   }
 ): Promise<string> {
   try {
+    // Validate dates
+    if (!(eventData.startDate instanceof Date) || isNaN(eventData.startDate.getTime())) {
+      throw new Error(`Invalid startDate: ${eventData.startDate}`)
+    }
+    if (!(eventData.endDate instanceof Date) || isNaN(eventData.endDate.getTime())) {
+      throw new Error(`Invalid endDate: ${eventData.endDate}`)
+    }
+    
+    // Google Calendar requires endDate > startDate
+    if (eventData.endDate <= eventData.startDate) {
+      throw new Error(
+        `Invalid time range: endDate (${eventData.endDate.toISOString()}) must be after startDate (${eventData.startDate.toISOString()})`
+      )
+    }
+    
     const oauth2Client = new google.auth.OAuth2()
     oauth2Client.setCredentials({ access_token: accessToken })
 

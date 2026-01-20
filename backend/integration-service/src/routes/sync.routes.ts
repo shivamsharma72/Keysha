@@ -497,13 +497,44 @@ router.post('/full', authenticate, async (req: Request, res: Response, next) => 
             stats.appToGoogle.updated++
           } else {
             // Event doesn't exist in Google Calendar - create it
+            // Convert strings to Date objects and validate
+            const startDate = appEvent.startDate instanceof Date 
+              ? appEvent.startDate 
+              : new Date(appEvent.startDate)
+            const endDate = appEvent.endDate instanceof Date 
+              ? appEvent.endDate 
+              : new Date(appEvent.endDate)
+            
+            // Validate dates
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+              logger.warn(`Skipping event "${appEvent.title}" - invalid dates: startDate=${appEvent.startDate}, endDate=${appEvent.endDate}`)
+              continue
+            }
+            
+            // Google Calendar requires endDate > startDate
+            // Auto-fix: if dates are reversed, swap them (safety measure for data integrity issues)
+            let finalStartDate = startDate
+            let finalEndDate = endDate
+            if (endDate <= startDate) {
+              logger.warn(`Event "${appEvent.title}" has reversed dates (endDate <= startDate). Auto-correcting: startDate=${startDate.toISOString()}, endDate=${endDate.toISOString()}`)
+              // Swap dates if they're reversed
+              finalStartDate = endDate
+              finalEndDate = startDate
+              
+              // If dates are equal, add 1 hour to endDate
+              if (finalEndDate.getTime() === finalStartDate.getTime()) {
+                finalEndDate = new Date(finalStartDate.getTime() + 60 * 60 * 1000) // Add 1 hour
+                logger.info(`Event "${appEvent.title}" had equal dates, setting endDate to 1 hour after startDate`)
+              }
+            }
+            
             logger.info(`Creating new Google Calendar event for "${appEvent.title}"`)
             const googleCalendarId = await createCalendarEvent(accessToken, {
               title: appEvent.title,
               description: appEvent.description,
               location: appEvent.location,
-              startDate: appEvent.startDate,
-              endDate: appEvent.endDate,
+              startDate: finalStartDate,
+              endDate: finalEndDate,
             })
 
             // Update item with googleCalendarId
@@ -519,7 +550,16 @@ router.post('/full', authenticate, async (req: Request, res: Response, next) => 
       // Handle reminders
       else if (appEvent.type === 'reminder' && appEvent.startDate) {
         // Convert startDate to endDate (15-minute duration)
-        const startDate = new Date(appEvent.startDate)
+        const reminderStartDate = appEvent.startDate instanceof Date 
+          ? appEvent.startDate 
+          : new Date(appEvent.startDate)
+        
+        if (isNaN(reminderStartDate.getTime())) {
+          logger.warn(`Skipping reminder "${appEvent.title}" - invalid startDate: ${appEvent.startDate}`)
+          continue
+        }
+        
+        const startDate = reminderStartDate
         const endDate = new Date(startDate.getTime() + 15 * 60 * 1000) // 15 minutes later
 
         // Since we filtered for items WITHOUT googleCalendarId, check if it exists in Google Calendar
