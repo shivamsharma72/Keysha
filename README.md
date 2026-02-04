@@ -1,4 +1,4 @@
-## Keysha – AI Productivity Engine (MVP)
+##  AI Productivity Engine (MVP)
 
 Keysha is a context‑aware productivity app that combines:
 - **React + Vite + Tailwind** frontend (Vercel‑ready)
